@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layout Dividido - Apresentação + VLibras</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      background-color: #f0f0f0;
+    }
+    
+    .split-container {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+    
+    /* Lado esquerdo - Apresentação */
+    .presentation-side {
+      flex: 1;
+      background: white;
+      border-right: 2px solid #ddd;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .presentation-header {
+      background: #0066cc;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .presentation-controls {
+      background: #f8f9fa;
+      padding: 15px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .presentation-controls input[type="file"] {
+      padding: 8px;
+      border: 2px solid #0066cc;
+      border-radius: 5px;
+      background: white;
+    }
+    
+    .presentation-controls button {
+      padding: 8px 15px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .presentation-controls button:hover {
+      background: #0052a3;
+    }
+    
+    .presentation-content {
+      flex: 1;
+      overflow: auto;
+      padding: 20px;
+      background: white;
+    }
+    
+    .pdf-viewer {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .pdf-canvas {
+      max-width: 100%;
+      max-height: 100%;
+      border: 1px solid #ccc;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .slide-content {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    
+    .slide-content h1 {
+      color: #0066cc;
+      margin-bottom: 30px;
+      font-size: 28px;
+    }
+    
+    .slide-content h2 {
+      color: #333;
+      margin: 20px 0;
+      font-size: 22px;
+    }
+    
+    .slide-content p {
+      font-size: 18px;
+      line-height: 1.6;
+      margin: 15px 0;
+      color: #555;
+    }
+    
+    .navigation {
+      background: #f8f9fa;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      border-top: 1px solid #ddd;
+    }
+    
+    .navigation button {
+      padding: 8px 15px;
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    .navigation button:hover {
+      background: #5a6268;
+    }
+    
+    .page-info {
+      font-weight: bold;
+      color: #333;
+    }
+    
+    /* Lado direito - VLibras */
+    .vlibras-side {
+      flex: 1;
+      background: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .vlibras-header {
+      background: #28a745;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .vlibras-container {
+      flex: 1;
+      position: relative;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Forçar VLibras a ficar grande e fixo */
+    .vlibras-container .vw-plugin-wrapper {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 1000 !important;
+    }
+    
+    .vlibras-container .vw-plugin-top-wrapper {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    
+    .vlibras-container .vw-access-button {
+      display: none !important; /* Esconder botão flutuante */
+    }
+    
+    .vlibras-status {
+      background: #e7f3ff;
+      padding: 15px;
+      text-align: center;
+      border-top: 1px solid #ddd;
+      font-weight: bold;
+      color: #0066cc;
+    }
+    
+    /* Status messages */
+    .status-message {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 8px;
+      z-index: 10000;
+      display: none;
+      font-weight: bold;
+    }
+    
+    .status-message.show {
+      display: block;
+    }
+    
+    .status-message.success {
+      background: #28a745;
+    }
+    
+    .status-message.error {
+      background: #dc3545;
+    }
+    
+    .status-message.info {
+      background: #17a2b8;
+    }
+    
+    /* Responsivo */
+    @media (max-width: 768px) {
+      .split-container {
+        flex-direction: column;
+      }
+      
+      .presentation-side {
+        border-right: none;
+        border-bottom: 2px solid #ddd;
+        height: 50vh;
+      }
+      
+      .vlibras-side {
+        height: 50vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="split-container">
+    <!-- Lado Esquerdo: Apresentação -->
+    <div class="presentation-side">
+      <div class="presentation-header">
+        📄 Apresentação / PDF
+      </div>
+      
+      <div class="presentation-controls">
+        <input type="file" id="fileInput" accept=".pdf,.ppt,.pptx" />
+        <button onclick="loadDocument()">📁 Carregar</button>
+        <button onclick="extractText()">🔤 Extrair Texto</button>
+        <button onclick="clearDocument()">🗑️ Limpar</button>
+      </div>
+      
+      <div class="presentation-content">
+        <div id="presentationArea">
+          <div class="slide-content">
+            <h1>Bem-vindo ao CaprioLibras</h1>
+            <h2>Layout Dividido</h2>
+            <p>Carregue um arquivo PDF ou PPT para começar</p>
+            <p>O conteúdo aparecerá aqui à esquerda</p>
+            <p>O VLibras ficará aberto à direita</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="navigation" id="navigation" style="display: none;">
+        <button onclick="previousSlide()">⬅️ Anterior</button>
+        <span class="page-info" id="pageInfo">Página 1 de 1</span>
+        <button onclick="nextSlide()">Próximo ➡️</button>
+      </div>
+    </div>
+    
+    <!-- Lado Direito: VLibras -->
+    <div class="vlibras-side">
+      <div class="vlibras-header">
+        🤟 Intérprete de Libras
+      </div>
+      
+      <div class="vlibras-container" id="vlibrasContainer">
+        <!-- VLibras será inserido aqui -->
+        <div vw class="enabled">
+          <div vw-access-button class="active"></div>
+          <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="vlibras-status" id="vlibrasStatus">
+        Aguardando conteúdo para traduzir...
+      </div>
+    </div>
+  </div>
+
+  <div class="status-message" id="statusMessage"></div>
+
+  <!-- Scripts -->
+  <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+  <script>
+    // Configurar PDF.js
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // Variáveis globais
+    let pdfDoc = null;
+    let currentPage = 1;
+    let totalPages = 0;
+    let extractedText = '';
+    let vlibrasWidget = null;
+
+    // Inicializar VLibras quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+      // Forçar VLibras a iniciar maximizado
+      setTimeout(() => {
+        vlibrasWidget = new window.VLibras.Widget({
+          rootPath: 'https://vlibras.gov.br/app',
+          position: 'right',
+          avatar: 'random'
+        });
+        
+        // Forçar o VLibras a ficar grande
+        forceVLibrasFullscreen();
+        
+        // Ativar VLibras automaticamente
+        setTimeout(() => {
+          activateVLibras();
+        }, 2000);
+        
+      }, 1000);
+    });
+
+    // Forçar VLibras a ocupar todo o espaço
+    function forceVLibrasFullscreen() {
+      const vlibrasContainer = document.getElementById('vlibrasContainer');
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.addedNodes.length) {
+            mutation.addedNodes.forEach((node) => {
+              if (node.classList && node.classList.contains('vw-plugin-wrapper')) {
+                // Forçar o wrapper a ocupar todo o espaço
+                node.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 1000 !important;';
+                
+                const topWrapper = node.querySelector('.vw-plugin-top-wrapper');
+                if (topWrapper) {
+                  topWrapper.style.cssText = 'width: 100% !important; height: 100% !important;';
+                }
+                
+                // Esconder botão de acesso
+                const accessButton = document.querySelector('.vw-access-button');
+                if (accessButton) {
+                  accessButton.style.display = 'none !important';
+                }
+              }
+            });
+          }
+        });
+      });
+      
+      observer.observe(vlibrasContainer, { childList: true, subtree: true });
+    }
+
+    // Ativar VLibras automaticamente
+    function activateVLibras() {
+      const accessButton = document.querySelector('.vw-access-button');
+      if (accessButton) {
+        accessButton.click();
+        showStatus('VLibras ativado automaticamente!', 'success');
+        updateVlibrasStatus('VLibras ativo - Pronto para traduzir');
+      }
+    }
+
+    // Mostrar status
+    function showStatus(message, type = 'info') {
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.textContent = message;
+      statusEl.className = `status-message show ${type}`;
+      
+      setTimeout(() => {
+        statusEl.classList.remove('show');
+      }, 3000);
+    }
+
+    // Atualizar status do VLibras
+    function updateVlibrasStatus(status) {
+      document.getElementById('vlibrasStatus').textContent = status;
+    }
+
+    // Carregar documento
+    async function loadDocument() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        showStatus('Selecione um arquivo primeiro', 'error');
+        return;
+      }
+
+      try {
+        showStatus('Carregando documento...', 'info');
+        
+        if (file.type === 'application/pdf') {
+          await loadPDF(file);
+        } else if (file.name.endsWith('.ppt') || file.name.endsWith('.pptx')) {
+          showStatus('Arquivos PPT precisam ser convertidos para PDF', 'error');
+        } else {
+          showStatus('Formato não suportado', 'error');
+        }
+        
+      } catch (error) {
+        console.error('Erro ao carregar documento:', error);
+        showStatus('Erro ao carregar documento', 'error');
+      }
+    }
+
+    // Carregar PDF
+    async function loadPDF(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+      
+      pdfDoc = await loadingTask.promise;
+      totalPages = pdfDoc.numPages;
+      currentPage = 1;
+      
+      showStatus(`PDF carregado! ${totalPages} páginas`, 'success');
+      
+      document.getElementById('navigation').style.display = 'flex';
+      updatePageInfo();
+      
+      await renderPage(currentPage);
+    }
+
+    // Renderizar página
+    async function renderPage(pageNum) {
+      if (!pdfDoc) return;
+      
+      const page = await pdfDoc.getPage(pageNum);
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      
+      const viewport = page.getViewport({scale: 1.5});
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      canvas.className = 'pdf-canvas';
+      
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+      
+      await page.render(renderContext).promise;
+      
+      const presentationArea = document.getElementById('presentationArea');
+      presentationArea.innerHTML = '';
+      presentationArea.appendChild(canvas);
+    }
+
+    // Extrair texto
+    async function extractText() {
+      if (!pdfDoc) {
+        showStatus('Carregue um PDF primeiro', 'error');
+        return;
+      }
+
+      showStatus('Extraindo texto...', 'info');
+      
+      let allText = '';
+      
+      for (let i = 1; i <= totalPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        allText += `Página ${i}: ${pageText}\n\n`;
+      }
+      
+      extractedText = allText;
+      
+      // Criar elemento de texto para VLibras
+      const textElement = document.createElement('div');
+      textElement.id = 'extractedTextContent';
+      textElement.style.cssText = 'position: absolute; left: -9999px; top: -9999px;';
+      textElement.textContent = allText;
+      document.body.appendChild(textElement);
+      
+      showStatus('Texto extraído! VLibras pode traduzir agora', 'success');
+      updateVlibrasStatus('Texto disponível para tradução');
+      
+      // Focar no texto para VLibras
+      setTimeout(() => {
+        focusTextForVLibras();
+      }, 1000);
+    }
+
+    // Focar texto para VLibras
+    function focusTextForVLibras() {
+      const textElement = document.getElementById('extractedTextContent');
+      if (textElement) {
+        const range = document.createRange();
+        range.selectNodeContents(textElement);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        updateVlibrasStatus('Traduzindo conteúdo...');
+      }
+    }
+
+    // Navegação
+    async function previousSlide() {
+      if (currentPage <= 1) return;
+      currentPage--;
+      await renderPage(currentPage);
+      updatePageInfo();
+    }
+
+    async function nextSlide() {
+      if (currentPage >= totalPages) return;
+      currentPage++;
+      await renderPage(currentPage);
+      updatePageInfo();
+    }
+
+    function updatePageInfo() {
+      document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages}`;
+    }
+
+    // Limpar documento
+    function clearDocument() {
+      pdfDoc = null;
+      currentPage = 1;
+      totalPages = 0;
+      extractedText = '';
+      
+      document.getElementById('fileInput').value = '';
+      document.getElementById('navigation').style.display = 'none';
+      document.getElementById('presentationArea').innerHTML = `
+        <div class="slide-content">
+          <h1>Bem-vindo ao CaprioLibras</h1>
+          <h2>Layout Dividido</h2>
+          <p>Carregue um arquivo PDF ou PPT para começar</p>
+        </div>
+      `;
+      
+      const textElement = document.getElementById('extractedTextContent');
+      if (textElement) {
+        textElement.remove();
+      }
+      
+      updateVlibrasStatus('Aguardando conteúdo para traduzir...');
+      showStatus('Documento limpo', 'success');
+    }
+
+    // Drag and drop
+    const presentationContent = document.querySelector('.presentation-content');
+    
+    presentationContent.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      presentationContent.style.background = '#e7f3ff';
+    });
+    
+    presentationContent.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      presentationContent.style.background = 'white';
+    });
+    
+    presentationContent.addEventListener('drop', (e) => {
+      e.preventDefault();
+      presentationContent.style.background = 'white';
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const fileInput = document.getElementById('fileInput');
+        fileInput.files = files;
+        loadDocument();
+      }
+    });
+  </script>
+
+</body>
+</html>
