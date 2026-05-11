@@ -196,6 +196,26 @@
       display: none !important; /* Esconder botão flutuante */
     }
     
+    /* Forçar avatar do VLibras a maximizar */
+    .vlibras-container video,
+    .vlibras-container canvas,
+    .vlibras-container .avatar-container,
+    .vlibras-container .vlibras-avatar {
+      width: 100% !important;
+      height: 80% !important;
+      max-width: none !important;
+      max-height: none !important;
+      object-fit: contain !important;
+    }
+    
+    /* Forçar todos os elementos do VLibras */
+    .vlibras-container div[class*="vlibras"],
+    .vlibras-container div[class*="avatar"],
+    .vlibras-container div[class*="player"] {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    
     .vlibras-status {
       background: #e7f3ff;
       padding: 15px;
@@ -347,7 +367,7 @@
       }, 1000);
     });
 
-    // Forçar VLibras a ocupar todo o espaço
+    // Forçar VLibras a ocupar todo o espaço e maximizar avatar
     function forceVLibrasFullscreen() {
       const vlibrasContainer = document.getElementById('vlibrasContainer');
       const observer = new MutationObserver((mutations) => {
@@ -368,6 +388,11 @@
                 if (accessButton) {
                   accessButton.style.display = 'none !important';
                 }
+                
+                // Forçar avatar a maximizar
+                setTimeout(() => {
+                  maximizeAvatar();
+                }, 2000);
               }
             });
           }
@@ -375,6 +400,43 @@
       });
       
       observer.observe(vlibrasContainer, { childList: true, subtree: true });
+    }
+    
+    // Maximizar avatar do VLibras
+    function maximizeAvatar() {
+      // Tentar encontrar e maximizar todos os elementos possíveis do avatar
+      const selectors = [
+        'video', 'canvas', 
+        '.avatar', '.vlibras-avatar', '.avatar-container',
+        '.player', '.vlibras-player',
+        'div[class*="avatar"]', 'div[class*="player"]',
+        'div[class*="video"]', 'div[class*="canvas"]'
+      ];
+      
+      selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          // Verificar se está dentro do container VLibras
+          const vlibrasContainer = document.getElementById('vlibrasContainer');
+          if (vlibrasContainer && vlibrasContainer.contains(element)) {
+            element.style.cssText = `
+              width: 100% !important;
+              height: 80% !important;
+              max-width: none !important;
+              max-height: none !important;
+              object-fit: contain !important;
+              position: relative !important;
+              top: auto !important;
+              left: auto !important;
+              transform: none !important;
+              scale: 1 !important;
+            `;
+          }
+        });
+      });
+      
+      // Forçar resize contínuo
+      setTimeout(maximizeAvatar, 3000);
     }
 
     // Ativar VLibras automaticamente
@@ -472,7 +534,7 @@
       presentationArea.appendChild(canvas);
     }
 
-    // Extrair texto
+    // Extrair texto e colar automaticamente no VLibras
     async function extractText() {
       if (!pdfDoc) {
         showStatus('Carregue um PDF primeiro', 'error');
@@ -499,13 +561,191 @@
       textElement.textContent = allText;
       document.body.appendChild(textElement);
       
-      showStatus('Texto extraído! VLibras pode traduzir agora', 'success');
-      updateVlibrasStatus('Texto disponível para tradução');
+      showStatus('Texto extraído! Copiando para VLibras...', 'success');
+      updateVlibrasStatus('Copiando texto para VLibras...');
       
-      // Focar no texto para VLibras
+      // COPIAR AUTOMATICAMENTE E COLAR NO VLIBRAS
       setTimeout(() => {
-        focusTextForVLibras();
-      }, 1000);
+        copyAndPasteToVLibras(allText);
+      }, 1500);
+    }
+    
+    // Copiar texto e colar no VLibras automaticamente
+    function copyAndPasteToVLibras(text) {
+      try {
+        // Copiar para clipboard
+        navigator.clipboard.writeText(text).then(() => {
+          showStatus('Texto copiado! Procurando campo do VLibras...', 'success');
+          
+          // Procurar campo de input do VLibras
+          setTimeout(() => {
+            pasteToVLibrasInput();
+          }, 1000);
+          
+        }).catch(err => {
+          console.error('Erro ao copiar texto:', err);
+          // Fallback: criar input temporário
+          fallbackCopyToClipboard(text);
+        });
+      } catch (error) {
+        console.error('Erro ao copiar/colar:', error);
+        showStatus('Erro ao copiar texto', 'error');
+      }
+    }
+    
+    // Fallback para copiar texto
+    function fallbackCopyToClipboard(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        document.execCommand('copy');
+        showStatus('Texto copiado! Procurando campo do VLibras...', 'success');
+        setTimeout(() => {
+          pasteToVLibrasInput();
+        }, 1000);
+      } catch (err) {
+        console.error('Fallback copy failed:', err);
+      }
+      
+      document.body.removeChild(textArea);
+    }
+    
+    // Procurar e colar no campo do VLibras
+    function pasteToVLibrasInput() {
+      // Múltiplos seletores para encontrar o campo do VLibras
+      const selectors = [
+        'input[type="text"]',
+        'textarea',
+        'input[placeholder*="texto"]',
+        'input[placeholder*="digite"]',
+        'input[aria-label*="texto"]',
+        'textarea[placeholder*="texto"]',
+        'div[contenteditable="true"]',
+        '.vlibras-input',
+        '.vw-input',
+        'input[class*="input"]',
+        'textarea[class*="input"]'
+      ];
+      
+      let vlibrasInput = null;
+      
+      // Procurar em todos os seletores
+      for (const selector of selectors) {
+        const inputs = document.querySelectorAll(selector);
+        for (const input of inputs) {
+          // Verificar se está dentro do container VLibras ou se parece ser do VLibras
+          const vlibrasContainer = document.getElementById('vlibrasContainer');
+          if (vlibrasContainer && vlibrasContainer.contains(input)) {
+            vlibrasInput = input;
+            break;
+          }
+          
+          // Verificar por atributos que indicam ser do VLibras
+          if (input.id && input.id.toLowerCase().includes('vlibras')) {
+            vlibrasInput = input;
+            break;
+          }
+          
+          if (input.className && input.className.toLowerCase().includes('vlibras')) {
+            vlibrasInput = input;
+            break;
+          }
+        }
+        
+        if (vlibrasInput) break;
+      }
+      
+      // Se encontrou, colar o texto
+      if (vlibrasInput) {
+        vlibrasInput.focus();
+        vlibrasInput.click();
+        
+        // Limpar e colar
+        vlibrasInput.value = '';
+        vlibrasInput.value = extractedText;
+        
+        // Disparar eventos
+        vlibrasInput.dispatchEvent(new Event('input', { bubbles: true }));
+        vlibrasInput.dispatchEvent(new Event('change', { bubbles: true }));
+        vlibrasInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        
+        showStatus('Texto colado no VLibras! 🎉', 'success');
+        updateVlibrasStatus('Texto enviado para tradução');
+        
+        // Tentar focar novamente
+        setTimeout(() => {
+          vlibrasInput.focus();
+          vlibrasInput.select();
+        }, 500);
+        
+      } else {
+        // Tentar criar um campo de texto visível para o usuário colar manualmente
+        createManualPasteArea();
+      }
+    }
+    
+    // Criar área para colar manualmente
+    function createManualPasteArea() {
+      const existingArea = document.getElementById('manualPasteArea');
+      if (existingArea) {
+        existingArea.remove();
+      }
+      
+      const pasteArea = document.createElement('div');
+      pasteArea.id = 'manualPasteArea';
+      pasteArea.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 75%;
+        transform: translate(-50%, -50%);
+        background: white;
+        border: 2px solid #0066cc;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        z-index: 10000;
+        max-width: 400px;
+      `;
+      
+      pasteArea.innerHTML = `
+        <h3 style="margin: 0 0 15px 0; color: #0066cc;">📋 Copiar e Colar Manual</h3>
+        <p style="margin: 0 0 10px 0; color: #666;">Texto extraído do PDF:</p>
+        <textarea id="manualText" style="width: 100%; height: 150px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; font-size: 14px;">${extractedText}</textarea>
+        <div style="margin-top: 15px; text-align: center;">
+          <button onclick="copyManualText()" style="background: #0066cc; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-right: 10px;">📋 Copiar</button>
+          <button onclick="closeManualPaste()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">❌ Fechar</button>
+        </div>
+        <p style="margin: 10px 0 0 0; font-size: 12px; color: #999;">Copie o texto acima e cole no campo do VLibras</p>
+      `;
+      
+      document.body.appendChild(pasteArea);
+      
+      showStatus('Área de colar manual criada', 'info');
+    }
+    
+    // Copiar texto manual
+    function copyManualText() {
+      const manualText = document.getElementById('manualText');
+      if (manualText) {
+        manualText.select();
+        document.execCommand('copy');
+        showStatus('Texto copiado! Cole no VLibras', 'success');
+      }
+    }
+    
+    // Fechar área manual
+    function closeManualPaste() {
+      const manualArea = document.getElementById('manualPasteArea');
+      if (manualArea) {
+        manualArea.remove();
+      }
     }
 
     // Focar texto para VLibras
