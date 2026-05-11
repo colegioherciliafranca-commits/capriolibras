@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minha Página com VLibras</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      line-height: 1.6;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #0066cc;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Bom dia! 👋</h1>
+    <p>Esta é uma página de exemplo com o VLibras já integrado.</p>
+    
+    <h2>Como usar:</h2>
+    <p>Clique no botão azul que aparece no canto da tela para abrir o intérprete de Libras.</p>
+    
+    <p>Você pode testar traduzindo os textos desta página.</p>
+
+    <h2>Exemplo de texto</h2>
+    <p>
+      Olá, seja muito bem-vindo à minha página. Aqui estamos testando a integração com o VLibras. 
+      O objetivo é tornar o conteúdo acessível para a comunidade surda.
+    </p>
+
+    <p>
+      Obrigado por visitar! Este é um projeto simples hospedado no GitHub Pages.
+    </p>
+  </div>
+
+  <!-- ==================== VLIBRAS ==================== -->
+  <div vw class="enabled">
+    <div vw-access-button class="active"></div>
+    <div vw-plugin-wrapper>
+      <div class="vw-plugin-top-wrapper"></div>
+    </div>
+  </div>
+
+  <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+  <script>
+    new window.VLibras.Widget({
+      rootPath: 'https://vlibras.gov.br/app',
+      position: 'right',     // pode mudar para 'left'
+      avatar: 'random'       // 'icaro', 'hosana', 'guga' ou 'random'
+    });
+  </script>
+
+</body>
+</html>
