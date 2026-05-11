@@ -350,6 +350,9 @@
     // Navegação entre páginas
     async function previousPage() {
       if (currentPage <= 1) return;
+      if (currentPage > 3) {
+        currentPage = 3;
+      }
       
       showStatus('Carregando página anterior...', 'processing');
       
@@ -376,6 +379,9 @@
 
     async function nextPage() {
       if (currentPage >= totalPages) return;
+      if (currentPage >= 3) {
+        return;
+      }
       
       showStatus('Carregando próxima página...', 'processing');
       
