@@ -161,7 +161,6 @@
       <div class="file-input">
         <input type="file" id="fileInput" accept=".pdf" />
         <button onclick="loadPDF()">📄 Carregar PDF</button>
-        <button onclick="extractAllText()">🔤 Extrair & Traduzir Automaticamente</button>
         <button onclick="clearAll()">🗑️ Limpar</button>
       </div>
     </div>
@@ -180,19 +179,13 @@
       </div>
       
       <div class="text-area">
-        <h3>📝 Texto Extraído</h3>
+        <h3>📝 Texto da Página Atual</h3>
         <div class="text-content" id="extractedText">
-          Carregue um PDF para extrair o texto automaticamente...
+          Carregue um PDF e clique na página para extrair o texto...
         </div>
       </div>
     </div>
 
-    <div class="vlibras-controls">
-      <h3>🎭 Controles VLibras</h3>
-      <button onclick="startVLibrasTranslation()">▶️ Iniciar Tradução</button>
-      <button onclick="pauseVLibrasTranslation()">⏸️ Pausar</button>
-      <button onclick="stopVLibrasTranslation()">⏹️ Parar</button>
-    </div>
   </div>
 
   <!-- ==================== VLIBRAS ==================== -->
@@ -268,8 +261,12 @@
         // Renderizar primeira página
         await renderPage(currentPage);
         
-        // Extrair texto da primeira página
-        await extractTextFromPage(currentPage);
+        // Adicionar evento de clique no canvas
+        const canvas = document.getElementById('pdfCanvas');
+        canvas.style.cursor = 'pointer';
+        canvas.onclick = extractCurrentPageText;
+        
+        showStatus('PDF carregado! Clique na página para extrair o texto.', 'success');
         
       } catch (error) {
         console.error('Erro ao carregar PDF:', error);
@@ -322,49 +319,85 @@
       }
     }
 
-    // Extrair todo texto
-    async function extractAllText() {
+    // Extrair texto da página atual ao clicar
+    async function extractCurrentPageText() {
       if (!pdfDoc) {
         showStatus('Carregue um PDF primeiro.', 'error');
         return;
       }
 
-      showStatus('Extraindo texto de todas as páginas...', 'processing');
+      showStatus(`Extraindo texto da página ${currentPage}...`, 'processing');
       
-      let allText = '';
-      
-      for (let i = 1; i <= totalPages; i++) {
-        const pageText = await extractTextFromPage(i);
-        allText += `\n--- Página ${i} ---\n${pageText}\n\n`;
+      try {
+        const pageText = await extractTextFromPage(currentPage);
+        extractedTextContent = pageText;
+        
+        document.getElementById('extractedText').textContent = `--- Página ${currentPage} ---\n\n${pageText}`;
+        
+        showStatus(`Texto extraído da página ${currentPage}!`, 'success');
+        
+        // Ativar VLibras automaticamente
+        setTimeout(() => {
+          activateVLibrasAutomatically();
+        }, 1000);
+        
+      } catch (error) {
+        console.error('Erro ao extrair texto:', error);
+        showStatus('Erro ao extrair texto da página.', 'error');
       }
-      
-      extractedTextContent = allText;
-      document.getElementById('extractedText').textContent = allText;
-      
-      showStatus(`Texto extraído de ${totalPages} páginas!`, 'success');
-      
-      // ATIVAÇÃO AUTOMÁTICA DO VLIBRAS APÓS EXTRAÇÃO
-      setTimeout(() => {
-        showStatus('Iniciando VLibras automaticamente...', 'processing');
-        activateVLibrasAutomatically();
-      }, 1500);
     }
 
     // Navegação entre páginas
     async function previousPage() {
       if (currentPage <= 1) return;
-      currentPage--;
-      await renderPage(currentPage);
-      await extractTextFromPage(currentPage);
-      updatePageInfo();
+      
+      showStatus('Carregando página anterior...', 'processing');
+      
+      try {
+        currentPage--;
+        await renderPage(currentPage);
+        updatePageInfo();
+        
+        // Re-adicionar evento de clique
+        const canvas = document.getElementById('pdfCanvas');
+        canvas.style.cursor = 'pointer';
+        canvas.onclick = extractCurrentPageText;
+        
+        // Limpar texto da página anterior
+        document.getElementById('extractedText').textContent = 'Clique na página para extrair o texto...';
+        extractedTextContent = '';
+        
+        showStatus(`Página ${currentPage} carregada`, 'success');
+      } catch (error) {
+        console.error('Erro ao navegar:', error);
+        showStatus('Erro ao carregar página anterior', 'error');
+      }
     }
 
     async function nextPage() {
       if (currentPage >= totalPages) return;
-      currentPage++;
-      await renderPage(currentPage);
-      await extractTextFromPage(currentPage);
-      updatePageInfo();
+      
+      showStatus('Carregando próxima página...', 'processing');
+      
+      try {
+        currentPage++;
+        await renderPage(currentPage);
+        updatePageInfo();
+        
+        // Re-adicionar evento de clique
+        const canvas = document.getElementById('pdfCanvas');
+        canvas.style.cursor = 'pointer';
+        canvas.onclick = extractCurrentPageText;
+        
+        // Limpar texto da página anterior
+        document.getElementById('extractedText').textContent = 'Clique na página para extrair o texto...';
+        extractedTextContent = '';
+        
+        showStatus(`Página ${currentPage} carregada`, 'success');
+      } catch (error) {
+        console.error('Erro ao navegar:', error);
+        showStatus('Erro ao carregar próxima página', 'error');
+      }
     }
 
     function updatePageInfo() {
