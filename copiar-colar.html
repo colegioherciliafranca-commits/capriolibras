@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Copiar e Colar - CaprioLibras</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      overflow: hidden;
+      min-height: calc(100vh - 40px);
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #0066cc, #004499);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    
+    .content-area {
+      display: flex;
+      height: calc(100vh - 200px);
+    }
+    
+    /* Lado esquerdo - Conteúdo */
+    .content-side {
+      flex: 1;
+      padding: 20px;
+      border-right: 2px solid #e0e0e0;
+      overflow-y: auto;
+      background: #fafafa;
+    }
+    
+    .upload-area {
+      background: white;
+      border: 3px dashed #0066cc;
+      border-radius: 10px;
+      padding: 30px;
+      text-align: center;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+    }
+    
+    .upload-area:hover {
+      background: #f0f8ff;
+      border-color: #0052a3;
+    }
+    
+    .upload-area.dragover {
+      background: #e7f3ff;
+      border-color: #004499;
+      transform: scale(1.02);
+    }
+    
+    .upload-area h3 {
+      color: #0066cc;
+      margin-bottom: 15px;
+      font-size: 20px;
+    }
+    
+    .file-input {
+      margin: 15px 0;
+    }
+    
+    .file-input input[type="file"] {
+      padding: 12px 20px;
+      border: 2px solid #0066cc;
+      border-radius: 8px;
+      background: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 15px 0;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #0066cc, #004499);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,102,204,0.3);
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #28a745, #1e7e34);
+      color: white;
+    }
+    
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(40,167,69,0.3);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #dc3545, #c82333);
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(220,53,69,0.3);
+    }
+    
+    .text-display {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      min-height: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+      line-height: 1.6;
+      font-size: 16px;
+      position: relative;
+    }
+    
+    .text-display h3 {
+      color: #0066cc;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .text-content {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+      min-height: 200px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    .copy-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .copy-button:hover {
+      background: #0052a3;
+    }
+    
+    /* Lado direito - VLibras */
+    .vlibras-side {
+      flex: 1;
+      padding: 20px;
+      background: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .vlibras-header {
+      background: linear-gradient(135deg, #28a745, #1e7e34);
+      color: white;
+      padding: 15px;
+      text-align: center;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .vlibras-container {
+      flex: 1;
+      background: white;
+      border-radius: 10px;
+      border: 2px solid #28a745;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+    }
+    
+    /* Forçar VLibras a ficar grande */
+    .vlibras-container .vw-plugin-wrapper {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 1000 !important;
+    }
+    
+    .vlibras-container .vw-plugin-top-wrapper {
+      width: 100% !important;
+      height: 100% !important;
+    }
+    
+    .vlibras-container .vw-access-button {
+      display: none !important;
+    }
+    
+    .vlibras-container video,
+    .vlibras-container canvas,
+    .vlibras-container .avatar-container,
+    .vlibras-container .vlibras-avatar {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      object-fit: contain !important;
+    }
+    
+    .instructions {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      color: #856404;
+    }
+    
+    .instructions h4 {
+      margin-bottom: 10px;
+      color: #856404;
+    }
+    
+    .instructions ol {
+      margin-left: 20px;
+      line-height: 1.6;
+    }
+    
+    .status-message {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #333;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      z-index: 10000;
+      display: none;
+      font-weight: bold;
+      max-width: 300px;
+    }
+    
+    .status-message.show {
+      display: block;
+      animation: slideIn 0.3s ease;
+    }
+    
+    .status-message.success {
+      background: #28a745;
+    }
+    
+    .status-message.error {
+      background: #dc3545;
+    }
+    
+    .status-message.info {
+      background: #17a2b8;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    /* Responsivo */
+    @media (max-width: 768px) {
+      .content-area {
+        flex-direction: column;
+        height: auto;
+      }
+      
+      .content-side {
+        border-right: none;
+        border-bottom: 2px solid #e0e0e0;
+      }
+      
+      .main-container {
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-container">
+    <div class="header">
+      🤟 Copiar e Colar para VLibras
+    </div>
+    
+    <div class="content-area">
+      <!-- Lado Esquerdo: Conteúdo do PDF/PPT -->
+      <div class="content-side">
+        <div class="upload-area" id="uploadArea">
+          <h3>📁 Carregar Documento</h3>
+          <p>Arraste um arquivo PDF ou PPT aqui ou clique para selecionar</p>
+          <div class="file-input">
+            <input type="file" id="fileInput" accept=".pdf,.ppt,.pptx" />
+          </div>
+          <div class="action-buttons">
+            <button class="btn btn-primary" onclick="loadDocument()">📄 Carregar</button>
+            <button class="btn btn-success" onclick="extractAllText()">🔤 Extrair Texto</button>
+            <button class="btn btn-danger" onclick="clearAll()">🗑️ Limpar</button>
+          </div>
+        </div>
+        
+        <div class="instructions">
+          <h4>📋 Como Usar:</h4>
+          <ol>
+            <li>Carregue um arquivo PDF ou PPT</li>
+            <li>Clique em "Extrair Texto" para copiar todo conteúdo</li>
+            <li>Use o botão "📋 Copiar Tudo" para copiar o texto</li>
+            <li>Cole o texto no campo do VLibras ao lado</li>
+            <li>O VLibras traduzirá automaticamente!</li>
+          </ol>
+        </div>
+        
+        <div class="text-display" id="textDisplay" style="display: none;">
+          <h3>📝 Texto Extraído:</h3>
+          <button class="copy-button" onclick="copyAllText()">📋 Copiar Tudo</button>
+          <div class="text-content" id="textContent"></div>
+        </div>
+      </div>
+      
+      <!-- Lado Direito: VLibras -->
+      <div class="vlibras-side">
+        <div class="vlibras-header">
+          🎭 Intérprete de Libras
+        </div>
+        
+        <div class="vlibras-container" id="vlibrasContainer">
+          <div vw class="enabled">
+            <div vw-access-button class="active"></div>
+            <div vw-plugin-wrapper>
+              <div class="vw-plugin-top-wrapper"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-message" id="statusMessage"></div>
+
+  <!-- Scripts -->
+  <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+  <script>
+    // Configurar PDF.js
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // Variáveis globais
+    let pdfDoc = null;
+    let extractedText = '';
+    let vlibrasWidget = null;
+
+    // Inicializar VLibras quando a página carregar
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(() => {
+        vlibrasWidget = new window.VLibras.Widget({
+          rootPath: 'https://vlibras.gov.br/app',
+          position: 'right',
+          avatar: 'random'
+        });
+        
+        // Forçar VLibras a ficar grande
+        forceVLibrasFullscreen();
+        
+        // Ativar VLibras automaticamente
+        setTimeout(() => {
+          activateVLibras();
+        }, 2000);
+        
+      }, 1000);
+    });
+
+    // Forçar VLibras a ficar grande
+    function forceVLibrasFullscreen() {
+      const vlibrasContainer = document.getElementById('vlibrasContainer');
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.addedNodes.length) {
+            mutation.addedNodes.forEach((node) => {
+              if (node.classList && node.classList.contains('vw-plugin-wrapper')) {
+                node.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 1000 !important;';
+                
+                const topWrapper = node.querySelector('.vw-plugin-top-wrapper');
+                if (topWrapper) {
+                  topWrapper.style.cssText = 'width: 100% !important; height: 100% !important;';
+                }
+                
+                // Esconder botão de acesso
+                const accessButton = document.querySelector('.vw-access-button');
+                if (accessButton) {
+                  accessButton.style.display = 'none !important';
+                }
+              }
+            });
+          }
+        });
+      });
+      
+      observer.observe(vlibrasContainer, { childList: true, subtree: true });
+    }
+
+    // Ativar VLibras
+    function activateVLibras() {
+      const accessButton = document.querySelector('.vw-access-button');
+      if (accessButton) {
+        accessButton.click();
+        showStatus('VLibras ativado!', 'success');
+      }
+    }
+
+    // Mostrar status
+    function showStatus(message, type = 'info') {
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.textContent = message;
+      statusEl.className = `status-message show ${type}`;
+      
+      setTimeout(() => {
+        statusEl.classList.remove('show');
+      }, 3000);
+    }
+
+    // Drag and drop
+    const uploadArea = document.getElementById('uploadArea');
+    
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const fileInput = document.getElementById('fileInput');
+        fileInput.files = files;
+        loadDocument();
+      }
+    });
+
+    // Carregar documento
+    async function loadDocument() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        showStatus('Selecione um arquivo primeiro', 'error');
+        return;
+      }
+
+      try {
+        showStatus('Carregando documento...', 'info');
+        
+        if (file.type === 'application/pdf') {
+          await loadPDF(file);
+        } else if (file.name.endsWith('.ppt') || file.name.endsWith('.pptx')) {
+          showStatus('Para PPT: Copie o texto diretamente do arquivo e cole no VLibras', 'info');
+          createPPTInstructions();
+        } else {
+          showStatus('Formato não suportado', 'error');
+        }
+        
+      } catch (error) {
+        console.error('Erro ao carregar documento:', error);
+        showStatus('Erro ao carregar documento', 'error');
+      }
+    }
+
+    // Carregar PDF
+    async function loadPDF(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+      
+      pdfDoc = await loadingTask.promise;
+      
+      showStatus(`PDF carregado! ${pdfDoc.numPages} páginas`, 'success');
+      
+      // Extrair texto automaticamente
+      setTimeout(() => {
+        extractAllText();
+      }, 1000);
+    }
+
+    // Criar instruções para PPT
+    function createPPTInstructions() {
+      const textDisplay = document.getElementById('textDisplay');
+      textDisplay.style.display = 'block';
+      
+      const textContent = document.getElementById('textContent');
+      textContent.innerHTML = `
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 10px 0;">
+          <h4 style="color: #856404; margin-bottom: 15px;">📋 Instruções para PPT:</h4>
+          <ol style="color: #856404; line-height: 1.8;">
+            <li>Abra seu arquivo PPT no PowerPoint</li>
+            <li>Selecione todo o texto (Ctrl+A)</li>
+            <li>Copie (Ctrl+C)</li>
+            <li>Clique no botão "📋 Copiar Tudo" abaixo</li>
+            <li>Cole no campo do VLibras ao lado</li>
+          </ol>
+          <p style="color: #856404; margin-top: 15px; font-weight: bold;">
+            💡 Dica: PPT é melhor porque permite selecionar todo o texto facilmente!
+          </p>
+        </div>
+      `;
+    }
+
+    // Extrair todo texto
+    async function extractAllText() {
+      if (!pdfDoc) {
+        showStatus('Carregue um PDF primeiro', 'error');
+        return;
+      }
+
+      showStatus('Extraindo texto de todas as páginas...', 'info');
+      
+      let allText = '';
+      
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        allText += `Página ${i}: ${pageText}\n\n`;
+      }
+      
+      extractedText = allText;
+      
+      // Mostrar texto
+      const textDisplay = document.getElementById('textDisplay');
+      textDisplay.style.display = 'block';
+      
+      const textContent = document.getElementById('textContent');
+      textContent.textContent = allText;
+      
+      showStatus(`Texto extraído! ${pdfDoc.numPages} páginas processadas`, 'success');
+      
+      // Copiar automaticamente para o clipboard
+      setTimeout(() => {
+        copyToClipboard(allText);
+      }, 1000);
+    }
+
+    // Copiar texto para clipboard
+    function copyToClipboard(text) {
+      try {
+        navigator.clipboard.writeText(text).then(() => {
+          showStatus('Texto copiado para área de transferência! 📋', 'success');
+        }).catch(err => {
+          // Fallback
+          fallbackCopy(text);
+        });
+      } catch (error) {
+        fallbackCopy(text);
+      }
+    }
+
+    // Fallback para copiar
+    function fallbackCopy(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        document.execCommand('copy');
+        showStatus('Texto copiado! 📋', 'success');
+      } catch (err) {
+        console.error('Erro ao copiar:', err);
+      }
+      
+      document.body.removeChild(textArea);
+    }
+
+    // Copiar todo texto
+    function copyAllText() {
+      if (extractedText) {
+        copyToClipboard(extractedText);
+      } else {
+        showStatus('Nenhum texto para copiar', 'error');
+      }
+    }
+
+    // Limpar tudo
+    function clearAll() {
+      pdfDoc = null;
+      extractedText = '';
+      
+      document.getElementById('fileInput').value = '';
+      document.getElementById('textDisplay').style.display = 'none';
+      
+      showStatus('Tudo limpo!', 'success');
+    }
+  </script>
+
+</body>
+</html>
