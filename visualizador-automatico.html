@@ -161,7 +161,7 @@
       <div class="file-input">
         <input type="file" id="fileInput" accept=".pdf" />
         <button onclick="loadPDF()">📄 Carregar PDF</button>
-        <button onclick="extractAllText()">🔤 Extrair Todo Texto</button>
+        <button onclick="extractAllText()">🔤 Extrair & Traduzir Automaticamente</button>
         <button onclick="clearAll()">🗑️ Limpar</button>
       </div>
     </div>
@@ -342,6 +342,12 @@
       document.getElementById('extractedText').textContent = allText;
       
       showStatus(`Texto extraído de ${totalPages} páginas!`, 'success');
+      
+      // ATIVAÇÃO AUTOMÁTICA DO VLIBRAS APÓS EXTRAÇÃO
+      setTimeout(() => {
+        showStatus('Iniciando VLibras automaticamente...', 'processing');
+        activateVLibrasAutomatically();
+      }, 1500);
     }
 
     // Navegação entre páginas
@@ -365,6 +371,97 @@
       document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages}`;
     }
 
+    // Ativação automática do VLibras
+    function activateVLibrasAutomatically() {
+      try {
+        // Múltiplas tentativas para encontrar e ativar o VLibras
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const tryActivate = () => {
+          attempts++;
+          
+          // Tentativa 1: Botão de acesso
+          let vlibrasButton = document.querySelector('[vw-access-button]');
+          
+          // Tentativa 2: Botão dentro do wrapper
+          if (!vlibrasButton) {
+            vlibrasButton = document.querySelector('.vw-access-button');
+          }
+          
+          // Tentativa 3: Botão com classe active
+          if (!vlibrasButton) {
+            vlibrasButton = document.querySelector('.active');
+          }
+          
+          // Tentativa 4: Botão VLibras genérico
+          if (!vlibrasButton) {
+            const allButtons = document.querySelectorAll('button, div[onclick], div[role="button"]');
+            for (let btn of allButtons) {
+              if (btn.textContent && btn.textContent.toLowerCase().includes('libras')) {
+                vlibrasButton = btn;
+                break;
+              }
+            }
+          }
+          
+          if (vlibrasButton && attempts < maxAttempts) {
+            console.log('VLibras button found, clicking...', attempts);
+            vlibrasButton.click();
+            
+            // Tentar focar no conteúdo para tradução
+            setTimeout(() => {
+              focusContentForVLibras();
+            }, 2000);
+            
+            showStatus('VLibras ativado automaticamente! 🎉', 'success');
+            isTranslating = true;
+            return;
+          }
+          
+          if (attempts < maxAttempts) {
+            setTimeout(tryActivate, 500);
+          } else {
+            showStatus('VLibras não encontrado. Clique manualmente no botão azul.', 'error');
+            isTranslating = false;
+          }
+        };
+        
+        tryActivate();
+        
+      } catch (error) {
+        console.error('Erro na ativação automática:', error);
+        showStatus('Erro ao ativar VLibras. Use o botão manualmente.', 'error');
+        isTranslating = false;
+      }
+    }
+    
+    // Focar conteúdo para VLibras
+    function focusContentForVLibras() {
+      try {
+        // Selecionar o texto extraído
+        const textElement = document.getElementById('extractedText');
+        if (textElement) {
+          // Criar uma seleção de texto
+          const range = document.createRange();
+          range.selectNodeContents(textElement);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          
+          // Disparar eventos de foco
+          textElement.focus();
+          
+          // Rolar para o conteúdo
+          textElement.scrollIntoView({ behavior: 'smooth' });
+          
+          console.log('Conteúdo focado para VLibras');
+        }
+      } catch (error) {
+        console.error('Erro ao focar conteúdo:', error);
+      }
+    }
+
     // Controles VLibras
     function startVLibrasTranslation() {
       if (!extractedTextContent) {
@@ -372,33 +469,7 @@
         return;
       }
 
-      if (isTranslating) {
-        showStatus('Tradução já em andamento...', 'processing');
-        return;
-      }
-
-      showStatus('Iniciando tradução com VLibras...', 'processing');
-      isTranslating = true;
-
-      // Tentar interagir com o VLibras
-      try {
-        // Buscar o botão do VLibras e clicar
-        setTimeout(() => {
-          const vlibrasButton = document.querySelector('[vw-access-button]');
-          if (vlibrasButton) {
-            vlibrasButton.click();
-            showStatus('VLibras ativado! Use os controles do avatar.', 'success');
-          } else {
-            showStatus('Botão do VLibras não encontrado. Clique manualmente no botão azul.', 'error');
-          }
-          isTranslating = false;
-        }, 1000);
-        
-      } catch (error) {
-        console.error('Erro ao iniciar VLibras:', error);
-        showStatus('Erro ao iniciar VLibras. Use o botão manualmente.', 'error');
-        isTranslating = false;
-      }
+      activateVLibrasAutomatically();
     }
 
     function pauseVLibrasTranslation() {
